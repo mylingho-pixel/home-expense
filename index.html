@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>萬隆居家雜支計算</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f5f5f5;
+    color: #333;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #333;
+  }
+  .btn {
+    padding: 8px 16px;
+    border: 1px solid #999;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: #eee; }
+  .btn-primary {
+    background: #333;
+    color: #fff;
+    border-color: #333;
+  }
+  .btn-primary:hover { background: #555; }
+  .btn-danger {
+    background: #fff;
+    color: #c0392b;
+    border-color: #e0b4b4;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+  }
+  .btn-danger:hover { background: #fdf0f0; }
+  .btn-sm {
+    padding: 4px 12px;
+    font-size: 0.8rem;
+  }
+
+  /* Blocks */
+  .month-block, .ref-block {
+    background: #fff;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  .month-header, .ref-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .month-header:hover, .ref-header:hover { background: #fafafa; }
+  .month-header-left, .ref-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .arrow {
+    font-size: 0.8rem;
+    color: #999;
+    transition: transform 0.2s;
+  }
+  .arrow.open { transform: rotate(90deg); }
+  .month-title, .ref-title {
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+  .month-summary-badge {
+    font-size: 0.85rem;
+    color: #666;
+  }
+  .month-body, .ref-body {
+    padding: 0 18px 18px;
+    display: none;
+  }
+  .month-body.open, .ref-body.open { display: block; }
+
+  /* Participants */
+  .section-label {
+    font-size: 0.8rem;
+    color: #888;
+    margin-bottom: 6px;
+    margin-top: 14px;
+  }
+  .participants {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .participant-tag {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #f0f0f0;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+  }
+  .participant-tag .remove {
+    cursor: pointer;
+    color: #aaa;
+    font-size: 0.75rem;
+    margin-left: 2px;
+  }
+  .participant-tag .remove:hover { color: #c0392b; }
+  .add-participant {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .add-participant input {
+    width: 80px;
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.85rem;
+  }
+
+  /* Expense table */
+  .expense-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 0.88rem;
+  }
+  .expense-table th {
+    text-align: left;
+    padding: 8px 6px;
+    border-bottom: 2px solid #eee;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #888;
+    white-space: nowrap;
+  }
+  .expense-table td {
+    padding: 6px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+  }
+  .expense-table input[type="text"],
+  .expense-table input[type="number"] {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 0.88rem;
+  }
+  .expense-table input[type="number"] { width: 90px; }
+  .expense-table select {
+    padding: 5px 6px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    background: #fff;
+    max-width: 90px;
+  }
+  .share-cell {
+    text-align: right;
+    font-weight: 500;
+    white-space: nowrap;
+    min-width: 60px;
+  }
+  .split-among {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .split-chk {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .split-chk input { width: auto; margin: 0; }
+
+  /* Settlement */
+  .settlement {
+    margin-top: 16px;
+    padding: 14px;
+    background: #f9f9f9;
+    border-radius: 8px;
+  }
+  .settlement h3 {
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    color: #555;
+  }
+  .settlement-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 0.9rem;
+  }
+  .settlement-row.total {
+    border-top: 1px solid #ddd;
+    margin-top: 8px;
+    padding-top: 10px;
+    font-weight: 600;
+  }
+  .settlement-result {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #b07040;
+    color: #fff;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    text-align: center;
+  }
+
+  /* Actions bar */
+  .actions-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  /* Delete month */
+  .delete-month {
+    font-size: 0.8rem;
+    color: #bbb;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .delete-month:hover { color: #c0392b; }
+
+  /* Reference tables */
+  .ref-section { margin-top: 30px; }
+  .ref-section h2 {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #ddd;
+    color: #555;
+  }
+  .ref-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin-top: 8px;
+  }
+  .ref-table th {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 2px solid #eee;
+    font-weight: 600;
+    font-size: 0.78rem;
+    color: #888;
+  }
+  .ref-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .ref-table td.amount { text-align: right; font-weight: 500; }
+  .ref-table .note { color: #999; font-size: 0.8rem; }
+  .ref-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 600px) {
+    .ref-grid { grid-template-columns: 1fr; }
+  }
+  .ref-category {
+    margin-bottom: 0;
+  }
+  .ref-category-title {
+    font-weight: 600;
+    font-size: 0.92rem;
+    margin-bottom: 4px;
+    margin-top: 4px;
+  }
+  .ref-fixed-note {
+    font-size: 0.85rem;
+    color: #666;
+    padding: 6px 0;
+  }
+  .add-record-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .add-record-row input {
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 0.85rem;
+  }
+  .add-record-row input.short { width: 80px; }
+  .add-record-row input.mid { width: 120px; }
+
+  /* Responsive */
+  .table-scroll { overflow-x: auto; }
+
+  @media (max-width: 600px) {
+    body { padding: 12px; }
+    .expense-table input[type="number"] { width: 70px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>萬隆居家雜支計算</h1>
+<div id="sync-status" style="font-size:0.8rem;color:#999;margin-bottom:12px"></div>
+
+<div class="actions-bar">
+  <button class="btn btn-primary" onclick="createMonth()">+ 新增月份</button>
+  <button class="btn" onclick="refreshFromServer()">重新整理</button>
+  <button class="btn" onclick="exportBackup()">匯出備份</button>
+  <button class="btn" onclick="importBackup()">匯入備份</button>
+</div>
+
+<div id="months-container"></div>
+
+<div class="ref-section">
+  <div id="ref-container"></div>
+</div>
+
+<script>
+// ─── Data ───
+const STORAGE_KEY = 'roommate_expenses_v2';
+// 檔案內建資料的版本。每次我把新月份寫進 getDefaultData 就把這個數字 +1，
+// 強制以「檔案」為主檔覆蓋瀏覽器暫存，避免暫存被清掉時資料退回舊版。
+const DATA_VERSION = 5;
+const REF_STORAGE_KEY = 'roommate_ref_v2';
+const DEFAULT_PARTICIPANTS = ['Myling', 'Sara'];
+const FUND_RATE_PER_NIGHT = 30;
+
+// 部署 Apps Script 網頁應用程式後，把網址貼在這裡（雙引號中間），全部人打開這個網頁就會共用同一份資料
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbycOSIX_cugrvXEYhPVQDNizBM2XYUMVoKRCl6aucLx-FnhffXRc24ORHnH6SJ6V8e0BQ/exec';
+
+function getDefaultData() {
+  return {
+    months: [
+      {
+        id: 'jun2026',
+        label: '2026 年 6 月',
+        participants: ['Myling', 'Sara', 'Jason'],
+        open: true,
+        fund: [],
+        expenses: [
+          { id: 'j1', name: '3-4月水費 #530繳交', amount: 283, splitType: 'equal', splitAmong: ['Myling', 'Sara', 'Jason'], paidBy: 'Myling', splitFrom: '', splitTo: '' },
+          { id: 'j2', name: '冰箱破損物件', amount: 1250, splitType: 'equal', splitAmong: ['Myling', 'Sara', 'Jason'], paidBy: 'Sara', splitFrom: '', splitTo: '' },
+          { id: 'j3', name: '6月網路費', amount: 690, splitType: 'equal', splitAmong: ['Myling', 'Sara'], paidBy: 'Myling', splitFrom: '', splitTo: '' },
+          { id: 'j4', name: '莎拉燕麥奶', amount: 120, splitType: 'equal', splitAmong: ['Sara'], paidBy: 'Myling', splitFrom: '', splitTo: '' },
+          { id: 'j5', name: '除蠅清潔用品們', amount: 378, splitType: 'equal', splitAmong: ['Myling', 'Sara', 'Jason'], paidBy: 'Myling', splitFrom: '', splitTo: '' },
+        ]
+      },
+      {
+        id: 'may2026',
+        label: '2026 年 5 月',
+        participants: ['Myling', 'Sara', 'Jason'],
+        open: false,
+        fund: [],
+        expenses: [
+          { id: 'm1', name: '3-4月電費', amount: 511, splitType: 'equal', splitAmong: ['Myling', 'Sara', 'Jason'], paidBy: 'Myling', splitFrom: '', splitTo: '' },
+          { id: 'm2', name: '5月網路', amount: 690, splitType: 'equal', splitAmong: ['Myling', 'Sara', 'Jason'], paidBy: 'Myling', splitFrom: '', splitTo: '' },
+        ]
+      },
+      {
+        id: 'apr2026',
+        label: '2026 年 4 月',
+        participants: ['Myling', 'Sara', 'Jason'],
+        open: false,
+        fund: [],
+        expenses: [
+          { id: 'e1', name: '網路費4月', amount: 690, splitType: 'equal', splitAmong: ['Myling', 'Sara', 'Jason'], paidBy: 'Myling', splitFrom: '', splitTo: '' },
+          { id: 'e2', name: '瓦斯 (0411叫)', amount: 735, splitType: 'equal', splitAmong: ['Myling', 'Sara', 'Jason'], paidBy: 'Myling', splitFrom: '', splitTo: '' },
+          { id: 'e3', name: '浴室馬桶沖水安裝費', amount: 800, splitType: 'equal', splitAmong: ['Myling', 'Sara', 'Jason'], paidBy: 'Myling', splitFrom: '', splitTo: '' },
+          { id: 'e4', name: '網路3月（校正J未計算）', amount: 230, splitType: 'personal', splitAmong: ['Jason'], paidBy: 'Myling', splitFrom: 'Jason', splitTo: 'Myling' },
+          { id: 'e5', name: '網路3月（校正S多給345）', amount: 115, splitType: 'personal', splitAmong: ['Myling'], paidBy: 'Sara', splitFrom: 'Myling', splitTo: 'Sara' },
+        ]
+      }
+    ]
+  };
+}
+
+// ─── Cloud sync（Apps Script + Google Sheets）───
+let _cachedData = null;
+let _cachedRef = null;
+let _lastSyncedAt = null;
+let _syncTimer = null;
+
+function loadLocalData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      // 暫存資料的版本要跟檔案一致，否則以檔案為準重建（避免被舊／空暫存蓋掉）
+      if (data._v === DATA_VERSION && data.months && data.months.length > 0) {
+        return normalizeData(data);
+      }
+    }
+  } catch {}
+  // 第一次開、暫存被清、或檔案資料有更新：以檔案內建資料為主檔
+  const def = getDefaultData();
+  def._v = DATA_VERSION;
+  saveLocalData(def);
+  return normalizeData(def);
+}
+
+// 對外仍叫 loadData／saveData，畫面上所有既有功能不用改
+function loadData() {
+  return _cachedData || loadLocalData();
+}
+
+// Ensure every expense has a splitAmong list (who shares this expense)
+function normalizeData(data) {
+  data.months.forEach(m => {
+    if (!Array.isArray(m.fund)) m.fund = [];
+    m.expenses.forEach(e => {
+      if (!Array.isArray(e.splitAmong) || e.splitAmong.length === 0) {
+        e.splitAmong = (e.splitType === 'personal' && e.splitFrom)
+          ? [e.splitFrom]
+          : [...m.participants];
+      } else {
+        e.splitAmong = m.participants.filter(p => e.splitAmong.includes(p));
+        if (e.splitAmong.length === 0) e.splitAmong = [...m.participants];
+      }
+    });
+  });
+  return data;
+}
+
+// ─── Backup ───
+function exportBackup() {
+  const data = loadData();
+  const ref = loadRef();
+  const blob = new Blob([JSON.stringify({ expenses: data, ref: ref }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `萬隆居家雜支_備份_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function importBackup() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const obj = JSON.parse(ev.target.result);
+        if (obj.expenses) saveData(obj.expenses);
+        if (obj.ref) saveRef(obj.ref);
+        render();
+        alert('匯入成功');
+      } catch { alert('檔案格式錯誤'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function saveLocalData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function saveData(data) {
+  _cachedData = data;
+  saveLocalData(data);
+  scheduleSync();
+}
+
+function loadLocalRef() {
+  try {
+    const raw = localStorage.getItem(REF_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  // Default data: 2025 onwards
+  return getDefaultRef();
+}
+
+function loadRef() {
+  return _cachedRef || loadLocalRef();
+}
+
+function saveLocalRef(ref) {
+  localStorage.setItem(REF_STORAGE_KEY, JSON.stringify(ref));
+}
+
+function saveRef(ref) {
+  _cachedRef = ref;
+  saveLocalRef(ref);
+  scheduleSync();
+}
+
+function setSyncStatus(text) {
+  const el = document.getElementById('sync-status');
+  if (el) el.textContent = text;
+}
+
+function scheduleSync() {
+  if (!APPS_SCRIPT_URL) return;
+  clearTimeout(_syncTimer);
+  setSyncStatus('尚未同步…');
+  _syncTimer = setTimeout(pushToServer, 600);
+}
+
+async function pushToServer() {
+  if (!APPS_SCRIPT_URL) return;
+  setSyncStatus('同步中…');
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        data: { expenses: _cachedData, ref: _cachedRef },
+        expectedUpdatedAt: _lastSyncedAt
+      })
+    });
+    const json = await res.json();
+    if (json.success) {
+      _lastSyncedAt = json.updatedAt;
+      setSyncStatus('已同步');
+    } else if (json.conflict) {
+      alert('有人剛剛也更新了資料，畫面會重新整理成最新版本，剛剛那筆請重新操作一次。');
+      _cachedData = normalizeData(json.data.expenses);
+      _cachedRef = json.data.ref;
+      _lastSyncedAt = json.updatedAt;
+      saveLocalData(_cachedData);
+      saveLocalRef(_cachedRef);
+      render();
+      setSyncStatus('已同步');
+    } else {
+      setSyncStatus('同步失敗，稍後會重試');
+    }
+  } catch (err) {
+    setSyncStatus('離線中，資料先存在這台裝置');
+  }
+}
+
+async function refreshFromServer() {
+  if (!APPS_SCRIPT_URL) { alert('還沒接上共用資料庫網址'); return; }
+  setSyncStatus('讀取中…');
+  try {
+    const res = await fetch(APPS_SCRIPT_URL);
+    const json = await res.json();
+    if (json.success) {
+      _cachedData = normalizeData(json.data.expenses);
+      _cachedRef = json.data.ref;
+      _lastSyncedAt = json.updatedAt;
+      saveLocalData(_cachedData);
+      saveLocalRef(_cachedRef);
+      render();
+      setSyncStatus('已同步');
+    } else {
+      setSyncStatus('讀取失敗');
+    }
+  } catch (err) {
+    setSyncStatus('離線中，暫時看本機備份');
+  }
+}
+
+async function initApp() {
+  // 先用本機備份秒開畫面，避免空白
+  _cachedData = loadLocalData();
+  _cachedRef = loadLocalRef();
+  render();
+
+  if (!APPS_SCRIPT_URL) {
+    setSyncStatus('尚未接上共用資料庫（只存在這台裝置）');
+    return;
+  }
+  await refreshFromServer();
+}
+
+function getDefaultRef() {
+  return {
+    open: false,
+    categories: [
+      {
+        id: 'water',
+        name: '水費',
+        type: 'table',
+        records: [
+          { period: '25.12-02', amount: 263, note: '0314繳交' },
+          { period: '25.10-12', amount: 242, note: '0105繳交' },
+          { period: '25.06-10', amount: 517, note: '1108繳交' },
+          { period: '25.04-06', amount: 315, note: '0704繳交' },
+          { period: '25.02-04', amount: 242, note: '0527繳交' },
+          { period: '24.12-02', amount: 201, note: '0401繳交' },
+        ]
+      },
+      {
+        id: 'electricity',
+        name: '電費',
+        type: 'table',
+        records: [
+          { period: '25.10-12', amount: 394, note: '262度，0105繳交' },
+          { period: '25.08-10', amount: 1071, note: '511度，1108繳交' },
+          { period: '25.07-08', amount: 1224, note: '604度，0822繳交' },
+          { period: '25.04-06', amount: 980, note: '0630繳交' },
+          { period: '25.02-04', amount: 540, note: '327度，0527繳費' },
+          { period: '24.12-02', amount: 1081, note: '594度，0401繳費' },
+        ]
+      },
+      {
+        id: 'wifi',
+        name: '網路 (WiFi)',
+        type: 'fixed',
+        amount: 690,
+        unit: '月'
+      },
+      {
+        id: 'gas',
+        name: '瓦斯',
+        type: 'log',
+        pricePerUnit: 720,
+        unit: '桶',
+        records: [
+          { date: '26.1227', note: '一桶M，$720' },
+          { date: '25.0701', note: '一桶M' },
+        ]
+      }
+    ]
+  };
+}
+
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+// ─── Month CRUD ───
+function createMonth() {
+  const data = loadData();
+  const now = new Date();
+  const label = `${now.getFullYear()} 年 ${now.getMonth() + 1} 月`;
+
+  const existing = data.months.find(m => m.label === label);
+  if (existing) {
+    if (!confirm(`${label} 已存在，要再新增一個嗎？`)) return;
+  }
+
+  const month = {
+    id: genId(),
+    label: label,
+    participants: [...DEFAULT_PARTICIPANTS],
+    fund: [],
+    expenses: [],
+    open: true
+  };
+  data.months.forEach(m => m.open = false);
+  data.months.unshift(month);
+  saveData(data);
+  render();
+}
+
+function deleteMonth(monthId) {
+  if (!confirm('確定要刪除這個月份的紀錄嗎？')) return;
+  const data = loadData();
+  data.months = data.months.filter(m => m.id !== monthId);
+  saveData(data);
+  render();
+}
+
+function toggleMonth(monthId) {
+  const data = loadData();
+  const month = data.months.find(m => m.id === monthId);
+  if (month) month.open = !month.open;
+  saveData(data);
+  render();
+}
+
+// ─── Participants ───
+function addParticipant(monthId) {
+  const input = document.querySelector(`#add-p-${monthId}`);
+  const name = input.value.trim();
+  if (!name) return;
+  const data = loadData();
+  const month = data.months.find(m => m.id === monthId);
+  if (month && !month.participants.includes(name)) {
+    month.participants.push(name);
+    month.expenses.forEach(e => {
+      if (!Array.isArray(e.splitAmong)) e.splitAmong = [...month.participants];
+      else if (!e.splitAmong.includes(name)) e.splitAmong.push(name);
+    });
+    saveData(data);
+    render();
+  }
+}
+
+function removeParticipant(monthId, name) {
+  const data = loadData();
+  const month = data.months.find(m => m.id === monthId);
+  if (!month) return;
+  if (month.participants.length <= 2) {
+    alert('至少需要兩個人');
+    return;
+  }
+  const used = month.expenses.some(e => e.paidBy === name ||
+    (e.splitType === 'personal' && (e.splitFrom === name || e.splitTo === name))) ||
+    (month.fund || []).some(f => f.payer === name);
+  if (used && !confirm(`${name} 已出現在費用項目中，移除後相關項目會需要重新設定。確定嗎？`)) return;
+
+  month.participants = month.participants.filter(p => p !== name);
+  month.expenses.forEach(e => {
+    if (e.paidBy === name) e.paidBy = month.participants[0];
+    if (Array.isArray(e.splitAmong)) {
+      e.splitAmong = e.splitAmong.filter(p => p !== name);
+      if (e.splitAmong.length === 0) e.splitAmong = [...month.participants];
+    }
+    if (e.splitFrom === name || e.splitTo === name) {
+      e.splitType = 'equal';
+      e.splitFrom = '';
+      e.splitTo = '';
+    }
+  });
+  (month.fund || []).forEach(f => {
+    if (f.payer === name) f.payer = month.participants[0];
+  });
+  saveData(data);
+  render();
+}
+
+// ─── Expenses ───
+function addExpense(monthId) {
+  const data = loadData();
+  const month = data.months.find(m => m.id === monthId);
+  if (!month) return;
+  month.expenses.push({
+    id: genId(),
+    name: '',
+    amount: 0,
+    splitType: 'equal',
+    splitAmong: [...month.participants],
+    paidBy: month.participants[0],
+    splitFrom: '',
+    splitTo: '',
+  });
+  saveData(data);
+  render();
+}
+
+function toggleSplitAmong(monthId, expenseId, name, checked) {
+  const data = loadData();
+  const month = data.months.find(m => m.id === monthId);
+  if (!month) return;
+  const exp = month.expenses.find(e => e.id === expenseId);
+  if (!exp) return;
+  if (!Array.isArray(exp.splitAmong)) exp.splitAmong = [...month.participants];
+  if (checked) {
+    if (!exp.splitAmong.includes(name)) exp.splitAmong.push(name);
+  } else {
+    if (exp.splitAmong.length <= 1) {
+      alert('至少要有一人分攤這筆');
+      render();
+      return;
+    }
+    exp.splitAmong = exp.splitAmong.filter(p => p !== name);
+  }
+  // keep order consistent with participants
+  exp.splitAmong = month.participants.filter(p => exp.splitAmong.includes(p));
+  saveData(data);
+  render();
+}
+
+function updateExpense(monthId, expenseId, field, value) {
+  const data = loadData();
+  const month = data.months.find(m => m.id === monthId);
+  if (!month) return;
+  const exp = month.expenses.find(e => e.id === expenseId);
+  if (!exp) return;
+
+  if (field === 'amount') {
+    exp.amount = parseFloat(value) || 0;
+  } else if (field === 'splitType') {
+    exp.splitType = value;
+    if (value === 'personal') {
+      exp.splitFrom = month.participants[0];
+      exp.splitTo = month.participants[1];
+      exp.paidBy = month.participants[1];
+    }
+  } else if (field === 'personalPair') {
+    const [from, to] = value.split('>');
+    exp.splitFrom = from;
+    exp.splitTo = to;
+    exp.paidBy = to;
+  } else {
+    exp[field] = value;
+  }
+  saveData(data);
+  render();
+}
+
+function removeExpense(monthId, expenseId) {
+  const data = loadData();
+  const month = data.months.find(m => m.id === monthId);
+  if (!month) return;
+  month.expenses = month.expenses.filter(e => e.id !== expenseId);
+  saveData(data);
+  render();
+}
+
+// ─── Fund (公基金) ───
+function addFundEntry(monthId) {
+  const data = loadData();
+  const month = data.months.find(m => m.id === monthId);
+  if (!month) return;
+  if (!Array.isArray(month.fund)) month.fund = [];
+  month.fund.push({
+    id: genId(),
+    name: '',
+    nights: 1,
+    amount: FUND_RATE_PER_NIGHT,
+    payer: month.participants[0]
+  });
+  saveData(data);
+  render();
+}
+
+function updateFundEntry(monthId, fundId, field, value) {
+  const data = loadData();
+  const month = data.months.find(m => m.id === monthId);
+  if (!month) return;
+  const entry = month.fund.find(f => f.id === fundId);
+  if (!entry) return;
+
+  if (field === 'nights') {
+    entry.nights = parseFloat(value) || 0;
+    entry.amount = entry.nights * FUND_RATE_PER_NIGHT;
+  } else if (field === 'amount') {
+    entry.amount = parseFloat(value) || 0;
+  } else {
+    entry[field] = value;
+  }
+  saveData(data);
+  render();
+}
+
+function removeFundEntry(monthId, fundId) {
+  const data = loadData();
+  const month = data.months.find(m => m.id === monthId);
+  if (!month) return;
+  month.fund = month.fund.filter(f => f.id !== fundId);
+  saveData(data);
+  render();
+}
+
+// ─── Calculation ───
+function calcMonth(month) {
+  const result = {};
+  month.participants.forEach(p => {
+    result[p] = { share: 0, paid: 0 };
+  });
+
+  month.expenses.forEach(exp => {
+    if (exp.amount <= 0) return;
+
+    const among = (exp.splitAmong && exp.splitAmong.length)
+      ? exp.splitAmong.filter(p => result[p])
+      : month.participants.slice();
+    if (among.length > 0) {
+      const each = exp.amount / among.length;
+      among.forEach(p => { result[p].share += each; });
+    }
+
+    if (exp.paidBy && result[exp.paidBy]) {
+      result[exp.paidBy].paid += exp.amount;
+    }
+  });
+
+  const fundEntries = month.fund || [];
+  const fundTotal = calcFundTotal(month);
+  if (fundTotal > 0 && month.participants.length > 0) {
+    const creditEach = fundTotal / month.participants.length;
+    month.participants.forEach(p => { result[p].share -= creditEach; });
+  }
+  fundEntries.forEach(f => {
+    if (f.payer && result[f.payer]) {
+      result[f.payer].share += (f.amount || 0);
+    }
+  });
+
+  return result;
+}
+
+function calcFundTotal(month) {
+  return (month.fund || []).reduce((s, f) => s + (f.amount || 0), 0);
+}
+
+function calcSettlement(calcResult) {
+  const balances = {};
+  for (const [name, val] of Object.entries(calcResult)) {
+    balances[name] = val.paid - val.share;
+  }
+
+  const settlements = [];
+  const debtors = [];
+  const creditors = [];
+
+  for (const [name, bal] of Object.entries(balances)) {
+    if (bal < -0.01) debtors.push({ name, amount: -bal });
+    else if (bal > 0.01) creditors.push({ name, amount: bal });
+  }
+
+  debtors.sort((a, b) => b.amount - a.amount);
+  creditors.sort((a, b) => b.amount - a.amount);
+
+  let di = 0, ci = 0;
+  while (di < debtors.length && ci < creditors.length) {
+    const transfer = Math.min(debtors[di].amount, creditors[ci].amount);
+    if (transfer > 0.01) {
+      settlements.push({
+        from: debtors[di].name,
+        to: creditors[ci].name,
+        amount: transfer
+      });
+    }
+    debtors[di].amount -= transfer;
+    creditors[ci].amount -= transfer;
+    if (debtors[di].amount < 0.01) di++;
+    if (creditors[ci].amount < 0.01) ci++;
+  }
+
+  return settlements;
+}
+
+// ─── Render: Months ───
+function render() {
+  const data = loadData();
+  const container = document.getElementById('months-container');
+
+  if (data.months.length === 0) {
+    container.innerHTML = '<p style="color:#999; text-align:center; padding:40px 0;">點擊「+ 新增月份」開始記帳</p>';
+  } else {
+    container.innerHTML = data.months.map(month => {
+      const calc = calcMonth(month);
+      const settlements = calcSettlement(calc);
+      const totalAmount = month.expenses.reduce((s, e) => s + (e.amount || 0), 0);
+      const fundTotal = calcFundTotal(month);
+
+      let badge = '';
+      if (totalAmount > 0) {
+        badge = `總額 $${formatNum(totalAmount)}`;
+        if (fundTotal > 0) {
+          badge += ` · 公基金折抵 $${formatNum(fundTotal)} · 淨額 $${formatNum(Math.max(totalAmount - fundTotal, 0))}`;
+        }
+      } else if (fundTotal > 0) {
+        badge = `公基金 $${formatNum(fundTotal)}`;
+      }
+
+      return `
+        <div class="month-block">
+          <div class="month-header" onclick="toggleMonth('${month.id}')">
+            <div class="month-header-left">
+              <span class="arrow ${month.open ? 'open' : ''}">▶</span>
+              <span class="month-title">${escHtml(month.label)}</span>
+              ${!month.open && badge ? `<span class="month-summary-badge">${badge}</span>` : ''}
+            </div>
+            ${month.open ? `<span class="delete-month" onclick="event.stopPropagation(); deleteMonth('${month.id}')">刪除</span>` : ''}
+          </div>
+          <div class="month-body ${month.open ? 'open' : ''}">
+            ${renderMonthBody(month, calc, settlements, totalAmount)}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  renderRef();
+}
+
+function renderMonthBody(month, calc, settlements, totalAmount) {
+  const participantsHtml = `
+    <div class="section-label">參與人</div>
+    <div class="participants">
+      ${month.participants.map(p => `
+        <span class="participant-tag">
+          ${escHtml(p)}
+          <span class="remove" onclick="removeParticipant('${month.id}', '${escAttr(p)}')">&times;</span>
+        </span>
+      `).join('')}
+      <span class="add-participant">
+        <input type="text" id="add-p-${month.id}" placeholder="新增人名"
+          onkeydown="if(event.key==='Enter') addParticipant('${month.id}')">
+        <button class="btn btn-sm" onclick="addParticipant('${month.id}')">+</button>
+      </span>
+    </div>
+  `;
+
+  const fundHtml = renderFundSection(month);
+
+  const shareHeaders = month.participants.map(p =>
+    `<th style="text-align:right">${escHtml(p)} 應付</th>`
+  ).join('');
+
+  const rows = month.expenses.map(exp => {
+    const among = (exp.splitAmong && exp.splitAmong.length)
+      ? month.participants.filter(p => exp.splitAmong.includes(p))
+      : [...month.participants];
+    const shares = {};
+    month.participants.forEach(p => { shares[p] = 0; });
+    if (exp.amount > 0 && among.length > 0) {
+      const each = exp.amount / among.length;
+      among.forEach(p => { shares[p] = each; });
+    }
+
+    const shareCells = month.participants.map(p => {
+      let cell = '';
+      if (exp.amount > 0) {
+        cell = among.includes(p) ? '$' + formatNum(shares[p]) : '<span style="color:#ccc">—</span>';
+      }
+      return `<td class="share-cell">${cell}</td>`;
+    }).join('');
+
+    const splitCheckboxes = `
+      <div class="split-among">
+        ${month.participants.map(p => `
+          <label class="split-chk">
+            <input type="checkbox" ${among.includes(p) ? 'checked' : ''}
+              onchange="toggleSplitAmong('${month.id}', '${exp.id}', '${escAttr(p)}', this.checked)">
+            ${escHtml(p)}
+          </label>
+        `).join('')}
+      </div>
+    `;
+
+    const paidBySelect = `
+      <select onchange="updateExpense('${month.id}', '${exp.id}', 'paidBy', this.value)">
+        ${month.participants.map(p =>
+          `<option value="${escAttr(p)}" ${exp.paidBy === p ? 'selected' : ''}>${escHtml(p)}</option>`
+        ).join('')}
+      </select>
+    `;
+
+    return `
+      <tr>
+        <td><input type="text" value="${escAttr(exp.name)}" placeholder="項目名稱"
+          onchange="updateExpense('${month.id}', '${exp.id}', 'name', this.value)"></td>
+        <td><input type="number" value="${exp.amount || ''}" placeholder="金額"
+          onchange="updateExpense('${month.id}', '${exp.id}', 'amount', this.value)"></td>
+        <td>${splitCheckboxes}</td>
+        <td>${paidBySelect}</td>
+        ${shareCells}
+        <td><button class="btn-danger" onclick="removeExpense('${month.id}', '${exp.id}')">&times;</button></td>
+      </tr>
+    `;
+  }).join('');
+
+  const tableHtml = `
+    <div class="table-scroll">
+      <table class="expense-table">
+        <thead>
+          <tr>
+            <th style="min-width:180px;width:25%">項目</th>
+            <th style="min-width:80px">金額</th>
+            <th style="min-width:70px">分攤給</th>
+            <th>付款人</th>
+            ${shareHeaders}
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px">
+      <button class="btn btn-sm" onclick="addExpense('${month.id}')">+ 新增項目</button>
+    </div>
+  `;
+
+  let settlementHtml = '';
+  if (month.expenses.length > 0 && totalAmount > 0) {
+    // Find who others owe (cards layout)
+    let resultHtml = '';
+    if (settlements.length > 0) {
+      const cards = settlements.map(s =>
+        `<div style="flex:1;min-width:120px;background:#b07040;color:#fff;border-radius:8px;padding:12px 16px;text-align:center">
+          <div style="font-size:1.3rem;font-weight:700">${escHtml(s.from)}</div>
+          <div style="font-size:1.3rem;font-weight:700;margin-top:4px">$${formatNum(s.amount)}</div>
+          <div style="font-size:0.75rem;opacity:0.7;margin-top:2px">應付 ${escHtml(s.to)}</div>
+        </div>`
+      ).join('');
+      resultHtml = `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">${cards}</div>`;
+    } else if (totalAmount > 0) {
+      resultHtml = '<div class="settlement-result" style="background:#6a9e5c">所有人已結清</div>';
+    }
+
+    const fundTotal = calcFundTotal(month);
+    const summaryLine = fundTotal > 0
+      ? `雜支總額 $${formatNum(totalAmount)} － 公基金 $${formatNum(fundTotal)} ＝ 淨額 $${formatNum(Math.max(totalAmount - fundTotal, 0))}`
+      : `雜支總額 $${formatNum(totalAmount)}`;
+
+    settlementHtml = `
+      <div class="settlement">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px">
+          <h3 style="margin:0">結算</h3>
+          <span style="font-size:0.85rem;color:#888">${summaryLine}</span>
+        </div>
+        ${resultHtml}
+      </div>
+    `;
+  }
+
+  return participantsHtml + tableHtml + fundHtml + settlementHtml;
+}
+
+// ─── Render: Fund (公基金) ───
+function renderFundSection(month) {
+  const fund = month.fund || [];
+  const fundTotal = calcFundTotal(month);
+
+  const rows = fund.map(f => {
+    const payerSelect = `
+      <select onchange="updateFundEntry('${month.id}', '${f.id}', 'payer', this.value)">
+        ${month.participants.map(p =>
+          `<option value="${escAttr(p)}" ${f.payer === p ? 'selected' : ''}>${escHtml(p)}</option>`
+        ).join('')}
+      </select>
+    `;
+    return `
+    <tr>
+      <td><input type="text" value="${escAttr(f.name)}" placeholder="誰來住*天數"
+        onchange="updateFundEntry('${month.id}', '${f.id}', 'name', this.value)"></td>
+      <td><input type="number" value="${f.nights || ''}" placeholder="晚數"
+        onchange="updateFundEntry('${month.id}', '${f.id}', 'nights', this.value)"></td>
+      <td><input type="number" value="${f.amount || ''}" placeholder="金額"
+        onchange="updateFundEntry('${month.id}', '${f.id}', 'amount', this.value)"></td>
+      <td>${payerSelect}</td>
+      <td><button class="btn-danger" onclick="removeFundEntry('${month.id}', '${f.id}')">&times;</button></td>
+    </tr>
+  `;
+  }).join('');
+
+  return `
+    <div class="section-label">公基金（居住者留宿，每晚 $${FUND_RATE_PER_NIGHT}；全員均分折抵本月雜支，付款人是負責這位居住者、要多付這筆錢的人）</div>
+    <div class="table-scroll">
+      <table class="expense-table">
+        <thead>
+          <tr>
+            <th style="min-width:120px">項目</th>
+            <th style="min-width:70px">晚數</th>
+            <th style="min-width:80px">金額</th>
+            <th style="min-width:90px">付款人</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+      <button class="btn btn-sm" onclick="addFundEntry('${month.id}')">+ 新增居住者</button>
+      ${fundTotal > 0 ? `<span style="font-size:0.85rem;color:#888">公基金合計 $${formatNum(fundTotal)}</span>` : ''}
+    </div>
+  `;
+}
+
+// ─── Render: Reference ───
+function toggleRef() {
+  const ref = loadRef();
+  ref.open = !ref.open;
+  saveRef(ref);
+  renderRef();
+}
+
+function addRefRecord(catId) {
+  const ref = loadRef();
+  const cat = ref.categories.find(c => c.id === catId);
+  if (!cat) return;
+
+  if (cat.type === 'table') {
+    const periodInput = document.querySelector(`#ref-period-${catId}`);
+    const amountInput = document.querySelector(`#ref-amount-${catId}`);
+    const noteInput = document.querySelector(`#ref-note-${catId}`);
+    const period = periodInput.value.trim();
+    const amount = parseFloat(amountInput.value) || 0;
+    const note = noteInput.value.trim();
+    if (!period || !amount) return;
+    cat.records.unshift({ period, amount, note });
+    periodInput.value = '';
+    amountInput.value = '';
+    noteInput.value = '';
+  } else if (cat.type === 'log') {
+    const dateInput = document.querySelector(`#ref-date-${catId}`);
+    const noteInput = document.querySelector(`#ref-lognote-${catId}`);
+    const date = dateInput.value.trim();
+    const note = noteInput.value.trim();
+    if (!date) return;
+    cat.records.unshift({ date, note });
+    dateInput.value = '';
+    noteInput.value = '';
+  }
+
+  saveRef(ref);
+  renderRef();
+}
+
+function removeRefRecord(catId, index) {
+  const ref = loadRef();
+  const cat = ref.categories.find(c => c.id === catId);
+  if (!cat) return;
+  cat.records.splice(index, 1);
+  saveRef(ref);
+  renderRef();
+}
+
+function updateRefFixed(catId, value) {
+  const ref = loadRef();
+  const cat = ref.categories.find(c => c.id === catId);
+  if (!cat) return;
+  cat.amount = parseFloat(value) || 0;
+  saveRef(ref);
+}
+
+function renderRef() {
+  const ref = loadRef();
+  const container = document.getElementById('ref-container');
+
+  const catHtmls = [];
+  ref.categories.forEach(cat => {
+    let catHtml = '';
+    if (cat.type === 'table') {
+      const rows = cat.records.map((r, i) => `
+        <tr>
+          <td>${escHtml(r.period)}</td>
+          <td class="amount">$${formatNum(r.amount)}</td>
+          <td class="note">${escHtml(r.note || '')}</td>
+          <td><span class="remove" style="cursor:pointer;color:#ccc;font-size:0.8rem" onclick="removeRefRecord('${cat.id}', ${i})">&times;</span></td>
+        </tr>
+      `).join('');
+
+      catHtml = `
+        <div class="ref-category">
+          <div class="ref-category-title">${escHtml(cat.name)}</div>
+          <table class="ref-table">
+            <thead><tr><th>期間</th><th style="text-align:right">金額</th><th>備註</th><th></th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="add-record-row">
+            <input class="mid" type="text" id="ref-period-${cat.id}" placeholder="期間 (如 26.02-04)">
+            <input class="short" type="number" id="ref-amount-${cat.id}" placeholder="金額">
+            <input class="mid" type="text" id="ref-note-${cat.id}" placeholder="備註">
+            <button class="btn btn-sm" onclick="addRefRecord('${cat.id}')">+</button>
+          </div>
+        </div>
+      `;
+    } else if (cat.type === 'fixed') {
+      catHtml = `
+        <div class="ref-category">
+          <div class="ref-category-title">${escHtml(cat.name)}</div>
+          <div class="ref-fixed-note">
+            固定費用：$<input type="number" value="${cat.amount}" style="width:70px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;font-size:0.85rem"
+              onchange="updateRefFixed('${cat.id}', this.value)"> / ${escHtml(cat.unit)}
+          </div>
+        </div>
+      `;
+    } else if (cat.type === 'log') {
+      const rows = cat.records.map((r, i) => `
+        <tr>
+          <td>${escHtml(r.date)}</td>
+          <td>${escHtml(r.note || '')}</td>
+          <td><span class="remove" style="cursor:pointer;color:#ccc;font-size:0.8rem" onclick="removeRefRecord('${cat.id}', ${i})">&times;</span></td>
+        </tr>
+      `).join('');
+
+      catHtml = `
+        <div class="ref-category">
+          <div class="ref-category-title">${escHtml(cat.name)}</div>
+          <div class="ref-fixed-note">每${escHtml(cat.unit)} $${formatNum(cat.pricePerUnit)}</div>
+          <table class="ref-table">
+            <thead><tr><th>日期</th><th>備註</th><th></th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="add-record-row">
+            <input class="mid" type="text" id="ref-date-${cat.id}" placeholder="日期 (如 26.0410)">
+            <input class="mid" type="text" id="ref-lognote-${cat.id}" placeholder="備註">
+            <button class="btn btn-sm" onclick="addRefRecord('${cat.id}')">+</button>
+          </div>
+        </div>
+      `;
+    }
+    catHtmls.push(catHtml);
+  });
+
+  // 2-column grid: water+electricity, internet+gas
+  const bodyHtml = `<div class="ref-grid">${catHtmls.join('')}</div>`;
+
+  container.innerHTML = `
+    <div class="ref-block" style="background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.08);overflow:hidden">
+      <div class="ref-header" onclick="toggleRef()">
+        <div class="ref-header-left">
+          <span class="arrow ${ref.open ? 'open' : ''}">▶</span>
+          <span class="ref-title">固定開支紀錄</span>
+          ${!ref.open ? '<span style="font-size:0.85rem;color:#999;margin-left:8px">水費 / 電費 / 網路 / 瓦斯</span>' : ''}
+        </div>
+      </div>
+      <div class="ref-body ${ref.open ? 'open' : ''}">
+        ${bodyHtml}
+      </div>
+    </div>
+  `;
+}
+
+// ─── Helpers ───
+function formatNum(n) {
+  return Math.round(n * 10) / 10 === Math.round(n)
+    ? Math.round(n).toLocaleString()
+    : (Math.round(n * 10) / 10).toLocaleString();
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function escAttr(s) {
+  return s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// ─── Init ───
+initApp();
+</script>
+</body>
+</html>
