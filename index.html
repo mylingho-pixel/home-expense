@@ -515,11 +515,29 @@ function setSyncStatus(text) {
   if (el) el.textContent = text;
 }
 
+let _syncInFlight = false;
+let _syncQueued = false;
+
 function scheduleSync() {
   if (!APPS_SCRIPT_URL) return;
   clearTimeout(_syncTimer);
   setSyncStatus('尚未同步…');
-  _syncTimer = setTimeout(pushToServer, 600);
+  _syncTimer = setTimeout(runSync, 600);
+}
+
+// 存檔一筆一筆排隊送出，避免上一筆還沒回應、下一筆就搶著送，互相判斷成衝突
+async function runSync() {
+  if (_syncInFlight) {
+    _syncQueued = true;
+    return;
+  }
+  _syncInFlight = true;
+  await pushToServer();
+  _syncInFlight = false;
+  if (_syncQueued) {
+    _syncQueued = false;
+    runSync();
+  }
 }
 
 async function pushToServer() {
@@ -599,12 +617,19 @@ function getDefaultRef() {
         name: '水費',
         type: 'table',
         records: [
+          { period: '26.05-06', amount: 263, note: '0721繳交' },
+          { period: '26.02-04', amount: 283, note: '0530繳交' },
           { period: '25.12-02', amount: 263, note: '0314繳交' },
           { period: '25.10-12', amount: 242, note: '0105繳交' },
           { period: '25.06-10', amount: 517, note: '1108繳交' },
           { period: '25.04-06', amount: 315, note: '0704繳交' },
           { period: '25.02-04', amount: 242, note: '0527繳交' },
           { period: '24.12-02', amount: 201, note: '0401繳交' },
+          { period: '24.10-12', amount: 284, note: '1230繳交' },
+          { period: '24.08-10', amount: 305, note: '1106繳交' },
+          { period: '24.06-08', amount: 305, note: '0829繳交' },
+          { period: '24.04-06', amount: 284, note: '0701繳交' },
+          { period: '24.02-04', amount: 336, note: '0503繳交' },
         ]
       },
       {
@@ -612,12 +637,19 @@ function getDefaultRef() {
         name: '電費',
         type: 'table',
         records: [
+          { period: '26.05-06', amount: 764, note: '399度，0719繳交' },
+          { period: '26.03-04', amount: 511, note: '282度，0504繳交' },
           { period: '25.10-12', amount: 394, note: '262度，0105繳交' },
           { period: '25.08-10', amount: 1071, note: '511度，1108繳交' },
           { period: '25.07-08', amount: 1224, note: '604度，0822繳交' },
           { period: '25.04-06', amount: 980, note: '0630繳交' },
           { period: '25.02-04', amount: 540, note: '327度，0527繳費' },
           { period: '24.12-02', amount: 1081, note: '594度，0401繳費' },
+          { period: '24.10-12', amount: 916, note: '474度，1230繳費' },
+          { period: '24.08-10', amount: 854, note: '463度，1106繳費' },
+          { period: '24.06-08', amount: 1306, note: '604度，0829繳費' },
+          { period: '24.04-06', amount: 674, note: '356度，0626繳費' },
+          { period: '24.02-04', amount: 709, note: '308度，0423繳費' },
         ]
       },
       {
@@ -631,11 +663,15 @@ function getDefaultRef() {
         id: 'gas',
         name: '瓦斯',
         type: 'log',
-        pricePerUnit: 720,
+        pricePerUnit: 735,
         unit: '桶',
         records: [
-          { date: '26.1227', note: '一桶M，$720' },
+          { date: '26.04XX', note: '一桶Ｍ，$735' },
+          { date: '25.1227', note: '一桶M，$720' },
           { date: '25.0701', note: '一桶M' },
+          { date: '24.1212', note: '一桶M' },
+          { date: '24.1026', note: '一桶' },
+          { date: '24.0925', note: '一桶' },
         ]
       }
     ]
@@ -805,6 +841,7 @@ function updateExpense(monthId, expenseId, field, value) {
     exp[field] = value;
   }
   saveData(data);
+  syncExpenseToRef(month.label, exp);
   render();
 }
 
@@ -814,6 +851,7 @@ function removeExpense(monthId, expenseId) {
   if (!month) return;
   month.expenses = month.expenses.filter(e => e.id !== expenseId);
   saveData(data);
+  removeExpenseRefSync(expenseId);
   render();
 }
 
@@ -860,6 +898,54 @@ function removeFundEntry(monthId, fundId) {
   month.fund = month.fund.filter(f => f.id !== fundId);
   saveData(data);
   render();
+}
+
+// ─── 雜支項目 → 固定開支紀錄 自動同步 ───
+// 項目名稱裡有「水費」「電費」「瓦斯」「網路」就自動歸類進對應的固定開支類別，不用手動再填一次
+function detectRefCategory(name) {
+  if (!name) return null;
+  if (name.includes('水費')) return 'water';
+  if (name.includes('電費')) return 'electricity';
+  if (name.includes('瓦斯')) return 'gas';
+  if (name.includes('網路') || name.toLowerCase().includes('wifi')) return 'wifi';
+  return null;
+}
+
+function syncExpenseToRef(monthLabel, expense) {
+  const ref = loadRef();
+
+  // 先清掉這筆之前同步過的舊紀錄（名稱改了、類別換了、金額歸零都會先清乾淨再重建）
+  ref.categories.forEach(cat => {
+    if (Array.isArray(cat.records)) {
+      cat.records = cat.records.filter(r => r.sourceExpenseId !== expense.id);
+    }
+  });
+
+  // 「個人校正」項目是兩人之間私下對帳，不是實際帳單金額，不算進固定開支紀錄
+  const catId = expense.splitType !== 'personal' ? detectRefCategory(expense.name) : null;
+  if (catId && expense.amount > 0) {
+    const cat = ref.categories.find(c => c.id === catId);
+    if (cat) {
+      if (cat.type === 'table') {
+        cat.records.unshift({ period: monthLabel, amount: expense.amount, note: expense.name, sourceExpenseId: expense.id });
+      } else if (cat.type === 'fixed') {
+        cat.amount = expense.amount;
+      } else if (cat.type === 'log') {
+        cat.records.unshift({ date: monthLabel, note: `${expense.name}，$${formatNum(expense.amount)}`, sourceExpenseId: expense.id });
+      }
+    }
+  }
+  saveRef(ref);
+}
+
+function removeExpenseRefSync(expenseId) {
+  const ref = loadRef();
+  ref.categories.forEach(cat => {
+    if (Array.isArray(cat.records)) {
+      cat.records = cat.records.filter(r => r.sourceExpenseId !== expenseId);
+    }
+  });
+  saveRef(ref);
 }
 
 // ─── Calculation ───
