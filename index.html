@@ -972,14 +972,16 @@ function calcMonth(month) {
   });
 
   const fundEntries = month.fund || [];
-  const fundTotal = calcFundTotal(month);
-  if (fundTotal > 0 && month.participants.length > 0) {
-    const creditEach = fundTotal / month.participants.length;
-    month.participants.forEach(p => { result[p].share -= creditEach; });
-  }
   fundEntries.forEach(f => {
+    const amount = f.amount || 0;
+    if (amount <= 0) return;
+    const others = month.participants.filter(p => p !== f.payer);
+    if (others.length > 0) {
+      const creditEach = amount / others.length;
+      others.forEach(p => { result[p].share -= creditEach; });
+    }
     if (f.payer && result[f.payer]) {
-      result[f.payer].share += (f.amount || 0);
+      result[f.payer].share += amount;
     }
   });
 
