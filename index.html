@@ -86,6 +86,11 @@
     font-size: 0.85rem;
     color: #666;
   }
+  .month-due-note {
+    font-size: 0.85rem;
+    color: #c0392b;
+    text-align: right;
+  }
   .month-body, .ref-body {
     padding: 0 18px 18px;
     display: none;
@@ -345,7 +350,7 @@ const STORAGE_KEY = 'roommate_expenses_v2';
 // 強制以「檔案」為主檔覆蓋瀏覽器暫存，避免暫存被清掉時資料退回舊版。
 const DATA_VERSION = 5;
 const REF_STORAGE_KEY = 'roommate_ref_v2';
-const DEFAULT_PARTICIPANTS = ['Myling', 'Sara'];
+const DEFAULT_PARTICIPANTS = ['Myling', 'Ola'];
 const FUND_RATE_PER_NIGHT = 30;
 
 // 部署 Apps Script 網頁應用程式後，把網址貼在這裡（雙引號中間），全部人打開這個網頁就會共用同一份資料
@@ -826,6 +831,27 @@ function toggleSplitAmong(monthId, expenseId, name, checked) {
   render();
 }
 
+function updatePrepaid(monthId, value) {
+  const data = loadData();
+  const month = data.months.find(m => m.id === monthId);
+  if (!month) return;
+  month.prepaid = parseFloat(value) || 0;
+  saveData(data);
+  render();
+}
+
+// 應付、已先匯、還差，收合時顯示在月份最右邊的紅字
+function dueNote(settlements, prepaid) {
+  if (settlements.length === 0) return '';
+  const s = settlements[0];
+  let note = `${escHtml(s.from)} 應付 $${formatNum(s.amount)}`;
+  if (prepaid > 0) {
+    const diff = s.amount - prepaid;
+    note += ` · 已匯 $${formatNum(prepaid)} · ` + (diff > 0.01 ? `還差 $${formatNum(diff)}` : diff < -0.01 ? `多匯 $${formatNum(-diff)}` : '已付清');
+  }
+  return note;
+}
+
 function updateExpense(monthId, expenseId, field, value) {
   const data = loadData();
   const month = data.months.find(m => m.id === monthId);
@@ -1071,7 +1097,9 @@ function render() {
               <span class="month-title">${escHtml(month.label)}</span>
               ${!month.open && badge ? `<span class="month-summary-badge">${badge}</span>` : ''}
             </div>
-            ${month.open ? `<span class="delete-month" onclick="event.stopPropagation(); deleteMonth('${month.id}')">刪除</span>` : ''}
+            ${month.open
+              ? `<span class="delete-month" onclick="event.stopPropagation(); deleteMonth('${month.id}')">刪除</span>`
+              : (totalAmount > 0 ? `<span class="month-due-note">${dueNote(settlements, month.prepaid || 0)}</span>` : '')}
           </div>
           <div class="month-body ${month.open ? 'open' : ''}">
             ${renderMonthBody(month, calc, settlements, totalAmount)}
@@ -1213,6 +1241,14 @@ function renderMonthBody(month, calc, settlements, totalAmount) {
           <span style="font-size:0.85rem;color:#888">${summaryLine}</span>
         </div>
         ${resultHtml}
+        ${settlements.length > 0 ? `
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px;font-size:0.9rem">
+            <label>${escHtml(settlements[0].from)} 已先匯款 $
+              <input type="number" value="${month.prepaid || ''}" placeholder="0" style="width:90px"
+                onchange="updatePrepaid('${month.id}', this.value)">
+            </label>
+            <span class="month-due-note">${dueNote(settlements, month.prepaid || 0)}</span>
+          </div>` : ''}
       </div>
     `;
   }
