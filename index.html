@@ -481,7 +481,16 @@ function saveLocalData(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+// 還沒成功讀到雲端版本前，一律不存、不上傳，避免手機／LINE 裡的舊暫存把雲端整份蓋掉
+function blockIfNotLoaded() {
+  if (!APPS_SCRIPT_URL || _lastSyncedAt) return false;
+  alert('還沒讀到雲端的最新資料，這次修改不會存。\n畫面會改成雲端版本，等上方顯示「已同步」再操作一次。');
+  refreshFromServer();
+  return true;
+}
+
 function saveData(data) {
+  if (blockIfNotLoaded()) return;
   _cachedData = data;
   saveLocalData(data);
   scheduleSync();
@@ -505,6 +514,7 @@ function saveLocalRef(ref) {
 }
 
 function saveRef(ref) {
+  if (blockIfNotLoaded()) return;
   _cachedRef = ref;
   saveLocalRef(ref);
   scheduleSync();
@@ -541,7 +551,7 @@ async function runSync() {
 }
 
 async function pushToServer() {
-  if (!APPS_SCRIPT_URL) return;
+  if (!APPS_SCRIPT_URL || !_lastSyncedAt) return;
   setSyncStatus('同步中…');
   try {
     const res = await fetch(APPS_SCRIPT_URL, {
